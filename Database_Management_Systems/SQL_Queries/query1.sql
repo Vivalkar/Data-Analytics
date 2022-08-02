@@ -1,0 +1,1 @@
+select b#, first_name || ' ' || last_name as name from students where st_level='master' and gpa>3.5;

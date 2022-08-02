@@ -1,0 +1,360 @@
+“I have done this assignment completely on my own. I have not copied it, nor have I given my solution to anyone else. 
+I understand that if I am involved in plagiarism or cheating I will have to sign an official form that 
+I have cheated and that this form will be stored in my official university record. I also understand that 
+I will receive a grade of 0 for the involved assignment and my grade will be reduced by one level (e.g., from A to A- or from B+ to B) 
+for my first offense,and that I will receive a grade of “F” for the course for any additional offense of any kind.”
+
+Sign - Prachi Vivalkar
+
+SQL> start query1
+SQL> select b#, first_name || ' ' || last_name as name from students where st_level='master' and gpa>3.5;
+
+B#        NAME                                                                  
+--------- -------------------------------                                       
+B00000001 Anne Broder                                                           
+B00000003 Tracy Wang                                                            
+B00000007 Becky Lee                                                             
+B00000009 Ben Liu                                                               
+B00000010 Sata Patel                                                            
+
+SQL> start query2
+SQL> select dept_code,course#,title from courses c where course# in
+  2  (select course# from classes class where semester = 'Spring' and year=2021 and class.classid in
+  3  (select classid from g_enrollments g where g.g_b#='B00000003'));
+
+DEPT_CODE    COURSE# TITLE                                                      
+--------- ---------- --------------------                                       
+CS               432 database systems                                           
+CS               536 machine learning                                           
+
+SQL> start query3
+SQL> column bdate heading 'birth date' format a10;
+SQL> select distinct s.b#, s.first_name, s.bdate  from students s, g_enrollments g, classes c where
+  2  c.dept_code = 'CS' and g.classid= c.classid and s.b# = g.g_b#;
+
+B#        FIRST_NAME      birth date                                            
+--------- --------------- ----------                                            
+B00000001 Anne            17-JAN-94                                             
+B00000005 Jack            18-OCT-95                                             
+B00000003 Tracy           06-AUG-97                                             
+B00000006 Terry           15-JUN-92                                             
+B00000004 Barbara         18-OCT-95                                             
+B00000007 Becky           12-NOV-96                                             
+
+6 rows selected.
+
+SQL> start query4
+SQL> select s.b#, s.first_name, s.last_name, s.gpa
+  2  from students s where s.b# in
+  3  (select g_b# from g_enrollments g, classes c
+  4  where c.classid=g.classid and c.dept_code='CS' and g_b# in
+  5  (select g_b# from g_enrollments g, classes c
+  6  where g.classid=c.classid and c.dept_code='Math'));
+
+B#        FIRST_NAME      LAST_NAME              GPA                            
+--------- --------------- --------------- ----------                            
+B00000001 Anne            Broder                 3.7                            
+
+SQL> start query5
+SQL> --Corelated query--
+SQL> select s.b#,s.first_name,s.last_name
+  2  from students s
+  3  where s.b# not in(
+  4  select g.g_b#
+  5  from g_enrollments g, score_grade sg
+  6  where g.score=sg.score and sg.lgrade = 'A')and s.b# in
+  7  (select g.g_b# from g_enrollments g
+  8  where g.g_b#=s.b#);
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000002 Terry           Buttler                                               
+B00000004 Barbara         Callan                                                
+B00000005 Jack            Smith                                                 
+
+SQL> 
+SQL> --Uncorelated query--
+SQL> select s.B#,s.first_name,s.last_name
+  2  from students s where s.B# not in(
+  3  select g.G_B# from g_enrollments g, score_grade sg
+  4  where g.score=sg.score and sg.lgrade = 'A') and s.B# in
+  5  (select g1.G_B# from g_enrollments g1, students s2
+  6  where g1.G_B#=s2.B#);
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000002 Terry           Buttler                                               
+B00000004 Barbara         Callan                                                
+B00000005 Jack            Smith                                                 
+
+SQL> start query6
+SQL> select b#,first_name,last_name from students s,g_enrollments g
+  2  where s.b#=g.g_b# and not exists
+  3  (select * from g_enrollments g where g_b# = s.b#  and g.score is not null and not exists
+  4  (select * from classes where classid = g.classid and exists
+  5  (select * from score_grade where score = g.score and lgrade='A')));
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000006 Terry           Zillman                                               
+B00000007 Becky           Lee                                                   
+
+SQL> start query7
+SQL> select classid, dept_code, course#, limit-class_size as seats_available
+  2  from classes
+  3  where course#>=500 and semester='Spring' and year=2021;
+
+CLASS DEPT_CODE    COURSE# SEATS_AVAILABLE                                      
+----- --------- ---------- ---------------                                      
+c0006 CS               532               1                                      
+c0005 CS               536               1                                      
+c0007 CS               550               0                                      
+
+SQL> start query8
+SQL> select s.b#, sum(credits)
+  2  from students s,g_enrollments g,classes class,courses c,course_credit cc
+  3  where g.g_b# = s.b#
+  4  and class.classid=g.classid
+  5  and c.course#=class.course#
+  6  and cc.course#=c.course#
+  7  group by b#;
+
+B#        SUM(CREDITS)                                                          
+--------- ------------                                                          
+B00000001           22                                                          
+B00000002            4                                                          
+B00000003           11                                                          
+B00000004            7                                                          
+B00000005            7                                                          
+B00000006            3                                                          
+B00000007            3                                                          
+
+7 rows selected.
+
+SQL> start query9
+SQL> select maxsum.dept_code,maxsum.course#
+  2  from
+  3  (select class.dept_code,class.course#,sum(class.class_size) as sum
+  4  from classes class
+  5  group by dept_code,course#
+  6  having sum(class.class_size) = (select max(sum(class_size))
+  7  				     from classes class
+  8  				     group by class.course#))maxsum, courses c
+  9  where maxsum.dept_code = c.dept_code and maxsum.course#=c.course#;
+
+DEPT_CODE    COURSE#                                                            
+--------- ----------                                                            
+CS               432                                                            
+
+SQL> start query10
+SQL> select s.b#,s.first_name,s.last_name, count(g.classid) as class_count
+  2  from students s
+  3  left join g_enrollments g
+  4  on g_b# = s.b#
+  5  where (select count(*) from g_enrollments where g_b# = s.b#) >= 2
+  6  group by b# ,first_name,last_name;
+
+B#        FIRST_NAME      LAST_NAME       CLASS_COUNT                           
+--------- --------------- --------------- -----------                           
+B00000004 Barbara         Callan                    2                           
+B00000005 Jack            Smith                     2                           
+B00000003 Tracy           Wang                      3                           
+B00000001 Anne            Broder                    6                           
+
+SQL> start query11
+SQL> select class.classid, class.dept_code, class.course#
+  2  from classes class where exists
+  3  (select * from students s where s.last_name like 'B%' and s.gpa is not null and exists
+  4  (select * from g_enrollments g where g.g_B# = s.B# and g.classid=class.classid));
+
+CLASS DEPT_CODE    COURSE#                                                      
+----- --------- ----------                                                      
+c0004 CS               432                                                      
+c0003 Math             314                                                      
+c0006 CS               532                                                      
+c0005 CS               536                                                      
+c0001 CS               432                                                      
+c0002 Math             314                                                      
+
+6 rows selected.
+
+SQL> start query11-22
+SQL> select classid, dept_code, course# from classes c where not exists
+  2  (select * from students s where gpa is not null
+  3  and last_name like 'B%' and not exists
+  4  (select * from g_enrollments ge where c.classid = ge.classid and ge.G_B# = s.B#))
+  5  /
+
+CLASS DEPT_CODE    COURSE#                                                      
+----- --------- ----------                                                      
+c0002 Math             314
+
+SQL> start query12
+SQL> select s.b#,s.first_name,s.last_name
+  2  from students s where exists
+  3  (select * from g_enrollments g where s.b# = g.g_b#  and classid in
+  4  (select classid from classes class where class.dept_code='CS' and class.class_size=13));
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000001 Anne            Broder                                                
+B00000003 Tracy           Wang                                                  
+B00000004 Barbara         Callan                                                
+
+SQL> start query13
+SQL>  select distinct(s.b#),s.first_name,s.last_name
+  2   from students s , g_enrollments g where s.b# = g.g_b# and  g.classid in
+  3   (select classid from classes class where course# in
+  4   (select course# from courses c where class.course# = c.course# and c.title like '%database%'));
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000004 Barbara         Callan                                                
+B00000005 Jack            Smith                                                 
+B00000006 Terry           Zillman                                               
+B00000003 Tracy           Wang                                                  
+B00000001 Anne            Broder   
+
+SQL> start query13-22
+SQL> select B#, first_name, last_name from students s where not exists
+  2  (select * from courses c where title like '%database%' and not exists
+  3  (select * from g_enrollments ge, classes cl
+  4  where s.B# = ge.G_B# and ge.classid = cl.classid
+  5  and cl.dept_code = c.dept_code and cl.course# = c.course#))
+  6  /
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000001 Anne            Broder                                                
+B00000005 Jack            Smith                                                 
+
+
+SQL> start query14
+SQL> select b#,first_name,last_name
+  2  from (select * from students s where st_level='master' and gpa is not null order by gpa desc)
+  3  where rownum <= 3 and exists
+  4  (select * from classes class where exists
+  5  (select * from g_enrollments g where g.classid = class.classid and b#=g.g_b#));
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000003 Tracy           Wang                                                  
+B00000007 Becky           Lee                                                   
+B00000001 Anne            Broder                                                
+
+SQL> start query15
+SQL> select distinct(s.b#),s.first_name,s.last_name
+  2  from students s, g_enrollments g where exists
+  3  (select * from classes class where dept_code='CS' and exists
+  4  (select * from g_enrollments g where g.g_b#=s.b# and g.classid=class.classid and not exists
+  5  (select * from classes class1 where dept_code='Math' and exists
+  6  (select * from g_enrollments g1 where g1.g_b#=s.b# and g1.classid=class1.classid))));
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000004 Barbara         Callan                                                
+B00000005 Jack            Smith                                                 
+B00000007 Becky           Lee                                                   
+B00000006 Terry           Zillman                                               
+B00000003 Tracy           Wang                                                  
+
+SQL> start query16
+SQL> column lgrade format a13;
+SQL> select c.dept_code,c.course#,c.title ,nvl(to_char(sg.lgrade),'Missing Grade') as lgrade
+  2  from courses c
+  3  left join classes class
+  4  on c.course# = class.course#
+  5  left join g_enrollments g
+  6  on g.classid=class.classid
+  7  left join score_grade sg
+  8  on g.score = sg.score
+  9  where g.g_b#='B00000003';
+
+DEPT_CODE    COURSE# TITLE                LGRADE                                
+--------- ---------- -------------------- -------------                         
+CS               432 database systems     A                                     
+CS               432 database systems     B+                                    
+CS               536 machine learning     Missing Grade                         
+
+SQL> start query17
+SQL> select g.g_b#, g.classid, g.score, sg.lgrade
+  2  from g_enrollments g, score_grade sg
+  3  where g.score = sg.score and g.score is not null order by score desc;
+
+G_B#      CLASS      SCORE LGRADE                                               
+--------- ----- ---------- -------------                                        
+B00000003 c0004         94 A                                                    
+B00000001 c0004         94 A                                                    
+B00000001 c0001         92 A                                                    
+B00000007 c0007         92 A                                                    
+B00000006 c0006         92 A                                                    
+B00000003 c0001         84 B+                                                   
+B00000004 c0005         82 B+                                                   
+B00000005 c0006       79.5 B                                                    
+B00000001 c0003         76 B                                                    
+B00000005 c0001         76 B                                                    
+B00000002 c0002         76 B                                                    
+B00000001 c0005         76 B                                                    
+B00000001 c0006       72.8 B-                                                   
+B00000001 c0002         68 C+                                                   
+B00000004 c0004      65.35 C                                                    
+
+15 rows selected.
+
+SQL> start query18
+SQL> select distinct(s.b#),s.first_name,s.last_name
+  2  from students s,g_enrollments g,classes class
+  3  where s.B#=G_B# and g.classid=class.classid and class.course# in
+  4  (select class.course#
+  5  from g_enrollments g,classes class,students s
+  6  where g.classid=class.classid and g_b#='B00000004')
+  7  ;
+
+B#        FIRST_NAME      LAST_NAME                                             
+--------- --------------- ---------------                                       
+B00000004 Barbara         Callan                                                
+B00000005 Jack            Smith                                                 
+B00000003 Tracy           Wang                                                  
+B00000001 Anne            Broder                                                
+
+SQL> start query19
+SQL> select avg(sum(cc.credits)) from g_enrollments g, classes c, course_credit cc
+  2  where g.classid=c.classid and cc.course#=c.course# and g.classid in
+  3  (select classid from classes cl where classid not in
+  4  (select classid from g_enrollments where classid = cl.classid and score is null)) group by g.g_b#;
+
+AVG(SUM(CC.CREDITS))                                                            
+--------------------                                                            
+          6.85714286  
+
+SQL> start query19-22
+SQL> select avg(temp.totalcredits)
+  2  from (select ge.G_B#, sum(cc.credits) totalcredits
+  3  from g_enrollments ge, courses c, course_credit cc, classes c1
+  4  where ge.classid = c1.classid and c.course# = cc.course# and
+  5  c.dept_code = c1.dept_code and c.course# = c1.course#
+  6  and score is not null group by ge.G_B#) temp
+  7  /
+
+AVG(TEMP.TOTALCREDITS)                                                          
+----------------------                                                          
+            7.71428571                                                           
+
+SQL> start query20
+SQL> select class.dept_code,class.course#, avg(g.score) as score
+  2  from students s, g_enrollments g , classes class,courses c
+  3  where g.g_b# = s.b#
+  4  and class.classid=g.classid
+  5  and c.course# =class.course#
+  6  and g.score is not null
+  7  group by class.dept_code,class.course#;
+
+DEPT_CODE    COURSE#      SCORE                                                 
+--------- ---------- ----------                                                 
+Math             314 73.3333333                                                 
+CS               532 81.4333333                                                 
+CS               550         92                                                 
+CS               536         79                                                 
+CS               432     84.225                                                 
+
+SQL> spool off
